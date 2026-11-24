@@ -29,7 +29,9 @@ Utilizando apenas uma webcam (ou celular conectado via **DroidCam USB**), o usu�
 | :--- | :--- |
 | **Mover o cursor** | Mantenha **Polegar + Indicador** juntos (pinça) e mova a cabeça |
 | **Pausar movimento** | Afaste o polegar do indicador |
+| **Scroll (rolar página)** | Mantenha a **mão aberta** e mova a cabeça para cima ou para baixo |
 | **Clique Esquerdo** | Pisque apenas o **olho esquerdo** |
+| **Clique Duplo** | Pisque o **olho esquerdo 2 vezes seguidas** |
 | **Clique Direito** | Pisque apenas o **olho direito** |
 | **Aumentar sensibilidade (`+5`)** | Junte **Polegar + Dedo Médio** (ou tecla `+`) |
 | **Diminuir sensibilidade (`-5`)** | Junte **Polegar + Dedo Anelar** (ou tecla `-`) |
@@ -44,8 +46,9 @@ Utilizando apenas uma webcam (ou celular conectado via **DroidCam USB**), o usu�
 | Qualquer frase normal | Digita/cola o texto automaticamente onde o cursor estiver |
 | **`"apagar"`** (isolado) | Apaga a última palavra inteira (`Ctrl + Backspace`) |
 | **`"espaço"`** (isolado) | Insere um espaço entre palavras |
+| **`"enter"`** (isolado) | Pressiona a tecla `Enter` (ideal para enviar pesquisas) |
 
-> 💡 **Dica:** Os comandos `"apagar"` e `"espaço"` só são executados quando ditos isoladamente, evitando que frases normais contendo essas palavras disparem ações por engano.
+> 💡 **Dica:** Os comandos `"apagar"`, `"espaço"` e `"enter"` só são executados quando ditos isoladamente, evitando que frases normais contendo essas palavras disparem ações por engano.
 
 ---
 

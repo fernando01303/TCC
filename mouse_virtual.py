@@ -46,7 +46,8 @@ SENSIBILIDADE_PASSO = 5.0
 GESTO_DEBOUNCE = 0.6          # Intervalo mínimo (s) entre ajustes de sensibilidade
 
 EAR_THRESHOLD = 0.20          # Limiar de abertura do olho para detectar piscada
-DEBOUNCE_CLIQUE = 0.8         # Intervalo mínimo (s) entre cliques do mesmo olho
+DEBOUNCE_CLIQUE = 0.12        # Intervalo mínimo (s) contra ruído entre piscadas (permite clique duplo)
+SCROLL_INTERVAL = 0.06        # Intervalo mínimo (s) entre eventos de scroll
 
 VOZ_DEBOUNCE = 1.5            # Intervalo mínimo (s) após finalizar uma captura de voz
 
@@ -290,6 +291,18 @@ def calcular_distancia(p1, p2, w: int, h: int) -> float:
     return math.hypot(x2 - x1, y2 - y1)
 
 
+def mao_aberta(hand_landmarks, w: int, h: int) -> bool:
+    """Retorna True se os 4 dedos (indicador, médio, anelar, mindinho) estiverem estendidos."""
+    pulso = hand_landmarks.landmark[0]
+    pares_dedos = ((8, 6), (12, 10), (16, 14), (20, 18))
+    for ponta_idx, junta_idx in pares_dedos:
+        dist_ponta = calcular_distancia(pulso, hand_landmarks.landmark[ponta_idx], w, h)
+        dist_junta = calcular_distancia(pulso, hand_landmarks.landmark[junta_idx], w, h)
+        if dist_ponta <= dist_junta * 1.15:
+            return False
+    return True
+
+
 def calcular_ear(face_landmarks, w: int, h: int):
     """
     Calcula o Eye Aspect Ratio (EAR) — Proporção de Abertura do Olho.
@@ -391,6 +404,16 @@ def worker_voz(toast: OverlayToast):
             pyautogui.press("space")
             definir_feedback_voz(
                 "Espaço inserido",
+                cor=(0, 200, 255),
+                duracao=2.0,
+                ativa=False,
+                toast=toast,
+                cor_toast="#38BDF8",
+            )
+        elif comando == "enter":
+            pyautogui.press("enter")
+            definir_feedback_voz(
+                "Enter pressionado",
                 cor=(0, 200, 255),
                 duracao=2.0,
                 ativa=False,
@@ -527,19 +550,23 @@ def main():
     nariz_suave_x, nariz_suave_y = None, None
     ancora_x, ancora_y = None, None
 
-    # Controle de Cliques e Gestos
+    # Controle de Cliques, Scroll e Gestos
     ultimo_clique_esq = time.time()
     ultimo_clique_dir = time.time()
+    esq_estava_fechado = False
+    dir_estava_fechado = False
+    ultimo_scroll = 0.0
     ultimo_ajuste_sens = 0.0
     texto_clique_ate = 0.0
     msg_clique = ""
 
     print("=== MOUSE VIRTUAL INICIADO ===")
     print("Polegar + Indicador : Mover o mouse (Embreagem)")
+    print("Mao aberta + Cabeca : Rolar pagina (Scroll cima/baixo)")
     print("Polegar + Medio     : Aumentar sensibilidade")
     print("Polegar + Anelar    : Diminuir sensibilidade")
     print("Polegar + Mindinho  : Ativar ditado por voz (PT-BR)")
-    print("Piscar um olho      : Clique Esquerdo / Direito")
+    print("Piscar um olho      : Clique Esquerdo (2x = Duplo) / Direito")
     print("Fechar janela / 'h' : Continuar em segundo plano (bandeja)")
     print("Pressione 'q'       : Encerrar aplicativo.\n")
 
@@ -560,6 +587,7 @@ def main():
             texto_status = "Mouse Pausado (Polegar+Indicador)"
             cor_status = (0, 0, 255)
             embreagem_ativa = False
+            scroll_ativo = False
             agora = time.time()
 
             # --- GESTOS DA MÃO (EMBREAGEM, SENSIBILIDADE E VOZ) ---
@@ -617,6 +645,10 @@ def main():
                     if app_estado["mostrar_camera"]:
                         cv2.line(frame, (px, py), (kx, ky), (255, 0, 255), 2)
                     iniciar_captura_voz(toast)
+                elif mao_aberta(hand_landmarks, w, h):
+                    scroll_ativo = True
+                    texto_status = "Modo SCROLL (Cabeca Cima/Baixo)"
+                    cor_status = (255, 200, 0)
 
             # --- MOVIMENTAÇÃO SUAVIZADA E CLIQUES (ROSTO) ---
             if results_face.multi_face_landmarks:
@@ -633,8 +665,8 @@ def main():
                     nariz_suave_x = EMA_ALPHA * raw_x + (1.0 - EMA_ALPHA) * nariz_suave_x
                     nariz_suave_y = EMA_ALPHA * raw_y + (1.0 - EMA_ALPHA) * nariz_suave_y
 
-                # Âncora Dinâmica: segue o nariz enquanto a embreagem está solta
-                if not embreagem_ativa or ancora_x is None:
+                # Âncora Dinâmica: segue o nariz apenas quando nem embreagem nem scroll estão ativos
+                if (not embreagem_ativa and not scroll_ativo) or ancora_x is None:
                     ancora_x, ancora_y = nariz_suave_x, nariz_suave_y
 
                 if app_estado["mostrar_camera"]:
@@ -643,7 +675,12 @@ def main():
                     ancora_px = int(round(ancora_x))
                     ancora_py = int(round(ancora_y))
 
-                    cor_deadzone = (0, 255, 0) if embreagem_ativa else (0, 0, 255)
+                    if embreagem_ativa:
+                        cor_deadzone = (0, 255, 0)
+                    elif scroll_ativo:
+                        cor_deadzone = (255, 200, 0)
+                    else:
+                        cor_deadzone = (0, 0, 255)
                     cv2.circle(frame, (ancora_px, ancora_py), DEADZONE_RADIUS, cor_deadzone, 2)
                     cv2.circle(frame, (nariz_x, nariz_y), 5, (255, 0, 0), -1)
                     cv2.line(frame, (ancora_px, ancora_py), (nariz_x, nariz_y), (255, 255, 255), 1)
@@ -662,8 +699,15 @@ def main():
                         curr_y = max(0.0, min(float(screen_h), curr_y + vel_y))
 
                         pyautogui.moveTo(int(curr_x), int(curr_y))
+                elif scroll_ativo:
+                    dy = nariz_suave_y - ancora_y
+                    if abs(dy) > DEADZONE_RADIUS and (agora - ultimo_scroll >= SCROLL_INTERVAL):
+                        direcao = 1 if dy < 0 else -1
+                        intensidade_scroll = max(40, min(220, int((abs(dy) - DEADZONE_RADIUS) * 2.0)))
+                        pyautogui.scroll(direcao * intensidade_scroll)
+                        ultimo_scroll = agora
 
-                # Cliques independentes por piscada (sempre ativos)
+                # Cliques independentes por piscada (disparo na borda de fechamento; 2x rápido = clique duplo)
                 ear_esq, ear_dir = calcular_ear(face_landmarks, w, h)
                 if app_estado["mostrar_camera"]:
                     cv2.putText(
@@ -680,17 +724,24 @@ def main():
                 dir_fechado = ear_dir < EAR_THRESHOLD
 
                 if esq_fechado and not dir_fechado:
-                    if agora - ultimo_clique_esq > DEBOUNCE_CLIQUE:
+                    if not esq_estava_fechado and (agora - ultimo_clique_esq > DEBOUNCE_CLIQUE):
                         pyautogui.click(button="left")
+                        msg_clique = "CLIQUE DUPLO" if (agora - ultimo_clique_esq < 0.55) else "CLIQUE ESQUERDO"
                         ultimo_clique_esq = agora
                         texto_clique_ate = agora + 0.5
-                        msg_clique = "CLIQUE ESQUERDO"
-                elif dir_fechado and not esq_fechado:
-                    if agora - ultimo_clique_dir > DEBOUNCE_CLIQUE:
+                    esq_estava_fechado = True
+                else:
+                    esq_estava_fechado = False
+
+                if dir_fechado and not esq_fechado:
+                    if not dir_estava_fechado and (agora - ultimo_clique_dir > DEBOUNCE_CLIQUE):
                         pyautogui.click(button="right")
                         ultimo_clique_dir = agora
                         texto_clique_ate = agora + 0.5
                         msg_clique = "CLIQUE DIREITO"
+                    dir_estava_fechado = True
+                else:
+                    dir_estava_fechado = False
 
             # --- EXIBIÇÃO DA JANELA DA CÂMERA (OU SEGUNDO PLANO) ---
             if app_estado["mostrar_camera"]:
