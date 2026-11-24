@@ -2,3 +2,8 @@ opencv-python
 mediapipe==0.10.14
 PyAutoGUI
 numpy
+SpeechRecognition
+PyAudio
+pyperclip
+pystray
+pyinstaller

@@ -1,124 +1,89 @@
-# 🐛 REGISTRO DE BUGS E SOLUÇÕES — Mouse Virtual (TCC)
+# 🖱️ Mouse Virtual — Controle por Movimentos e Voz (TCC)
 
-Este arquivo documenta todos os erros encontrados durante o desenvolvimento e suas respectivas soluções. CONSULTAR SEMPRE antes de tentar corrigir um bug.
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![OpenCV](https://img.shields.io/badge/OpenCV-Visão%20Computacional-5C3EE8?logo=opencv&logoColor=white)
+![MediaPipe](https://img.shields.io/badge/MediaPipe-0.10.14-0097A7)
+![Windows](https://img.shields.io/badge/Windows-Executável%20Único-0078D6?logo=windows&logoColor=white)
 
-*Última atualização: 2026-08-06*
-
----
-
-## BUG #1 — Python não encontrado no PATH do Windows
-
-**SINTOMA:**
-"Python was not found; run without arguments to install from the Microsoft Store"
-Os comandos `python`, `pip`, `py` não são reconhecidos pelo terminal.
-
-**CAUSA:**
-O Python não estava instalado no sistema, ou o terminal (PowerShell) foi aberto ANTES da instalação do Python e ainda carregava o PATH antigo.
-
-**SOLUÇÃO:**
-1. Instalar Python via: `winget install --id Python.Python.3.12 -e --accept-package-agreements --accept-source-agreements`
-2. Após instalar, **FECHAR E REABRIR** o terminal para que o novo PATH seja carregado.
-3. Se rodar via script automatizado, forçar reload do PATH no PowerShell.
+Software de **acessibilidade e controle computacional sem mouse ou teclado físico**, desenvolvido como Trabalho de Conclusão de Curso (TCC).  
+Utilizando apenas uma webcam (ou celular conectado via **DroidCam USB**), o usuário controla o cursor com movimentos da cabeça, realiza cliques piscando os olhos, ajusta a sensibilidade com gestos manuais e dita textos por voz em Português (`pt-BR`).
 
 ---
 
-## BUG #2 — mediapipe não possui atributo 'solutions'
+## ✨ Principais Recursos
 
-**SINTOMA:**
-`AttributeError: module 'mediapipe' has no attribute 'solutions'`
-
-**CAUSA:**
-O MediaPipe versão 1.0.0 (lançado em 2025+) removeu a API legada `mp.solutions.*` e migrou para uma nova API baseada em `mp.tasks`. Nosso código usa a API legada.
-
-**SOLUÇÃO:**
-Instalar uma versão do MediaPipe anterior à 1.0:
-`pip install mediapipe==0.10.14`
-
-NÃO usar: `pip install mediapipe` (instala a 1.0+ que quebra o código).
-O comando correto completo é:
-`pip install opencv-python "mediapipe<1.0" pyautogui`
+- **🎯 Joystick Facial com Âncora Dinâmica:** a zona neutra (*deadzone*) acompanha automaticamente a posição do rosto enquanto a embreagem está solta, permitindo uso confortável em qualquer postura ou inclinação.
+- **🪶 Filtro Anti-Tremor (EMA):** suavização em tempo real que elimina micro-oscilações da câmera para movimentos precisos.
+- **🤏 Embreagem de Precisão:** o cursor só se move enquanto polegar e indicador estiverem praticamente encostados; ao afastar os dedos, o movimento pausa na hora.
+- **👁️ Cliques Independentes por Piscada (EAR):** clique esquerdo e direito funcionam a qualquer momento, mesmo com o movimento pausado, ignorando piscadas naturais simultâneas.
+- **🎙️ Ditado e Edição por Voz (`PT-BR`):** transcrição em segundo plano sem congelar o vídeo, preservando acentuação e `ç`, com comandos dedicados de edição.
+- **🔔 Segundo Plano, Bandeja e Avisos Flutuantes:** roda sem janela de terminal, possui ícone na bandeja do sistema (*System Tray*) e exibe notificações flutuantes discretas que não roubam o foco de onde você estiver digitando.
 
 ---
 
-## BUG #3 — Tela verde ao usar DroidCam como câmera
+## 🖐️ Guia Rápido de Gestos e Comandos
 
-**SINTOMA:**
-A janela do OpenCV abre, mas exibe uma tela inteiramente VERDE. O rosto não aparece, o MediaPipe não detecta nada, o mouse não se move.
+### Movimentos e Gestos
 
-**CAUSA:**
-O DroidCam transmite vídeo em formato AVC/H.264. Quando o OpenCV abre a câmera sem especificar o codec, ele tenta decodificar os frames como YUV/NV12 bruto, resultando em uma imagem toda verde (os bytes são interpretados incorretamente).
+| Ação | Gesto / Comando |
+| :--- | :--- |
+| **Mover o cursor** | Mantenha **Polegar + Indicador** juntos (pinça) e mova a cabeça |
+| **Pausar movimento** | Afaste o polegar do indicador |
+| **Clique Esquerdo** | Pisque apenas o **olho esquerdo** |
+| **Clique Direito** | Pisque apenas o **olho direito** |
+| **Aumentar sensibilidade (`+5`)** | Junte **Polegar + Dedo Médio** (ou tecla `+`) |
+| **Diminuir sensibilidade (`-5`)** | Junte **Polegar + Dedo Anelar** (ou tecla `-`) |
+| **Ativar ditado por voz** | Junte **Polegar + Dedo Mindinho** |
+| **Rodar em segundo plano** | Feche a janela da câmera (`X`) ou pressione `h` |
+| **Encerrar aplicativo** | Pressione `q` na câmera ou clique em **Sair** no ícone da bandeja |
 
-**SOLUÇÃO:**
-Tentar múltiplas estratégias de codec na inicialização da câmera (H264, MJPG, DSHOW). 
-IMPORTANTE: Descartar os primeiros 5-10 frames após abrir a câmera, pois muitas câmeras virtuais enviam frames corrompidos nos primeiros quadros.
+### Comandos de Voz (durante o ditado)
+
+| Você fala | O que o software faz |
+| :--- | :--- |
+| Qualquer frase normal | Digita/cola o texto automaticamente onde o cursor estiver |
+| **`"apagar"`** (isolado) | Apaga a última palavra inteira (`Ctrl + Backspace`) |
+| **`"espaço"`** (isolado) | Insere um espaço entre palavras |
+
+> 💡 **Dica:** Os comandos `"apagar"` e `"espaço"` só são executados quando ditos isoladamente, evitando que frases normais contendo essas palavras disparem ações por engano.
 
 ---
 
-## BUG #4 — cv2.VideoCapture trava/congela ao abrir câmera inexistente
+## 🚀 Como Usar (Sem Instalar Nada — Recomendado)
 
-**SINTOMA:**
-O script fica travado na linha `cv2.VideoCapture(i)` sem avançar. Nenhuma mensagem de erro aparece. O programa não responde.
-
-**CAUSA:**
-No Windows, o OpenCV pode travar por tempo indeterminado ao tentar abrir um índice de câmera que não existe, especialmente sem o backend DSHOW.
-
-**SOLUÇÃO:**
-Rodar cada tentativa de `cv2.VideoCapture()` em uma THREAD SEPARADA com timeout (ver BUG #6).
+1. Acesse a página de [**Releases**](https://github.com/fernando01303/TCC/releases) deste repositório e baixe o arquivo **`MouseVirtual.exe`**.
+2. Conecte sua webcam ou abra o **DroidCam via cabo USB** (veja o porquê no relatório de erros).
+3. Dê dois cliques em `MouseVirtual.exe` — uma tela animada de carregamento aparecerá enquanto a câmera é iniciada.
+4. Para usar sem a janela da câmera na tela, basta fechá-la (`X` ou `h`): o controle continuará ativo em segundo plano e o ícone ficará visível perto do relógio do Windows.
 
 ---
 
-## BUG #5 — print() do Python não aparece nos logs em tempo real
+## 🛠️ Como Executar pelo Código-Fonte (Desenvolvedores)
 
-**SINTOMA:**
-O script parece estar travado (sem nenhum output), mas na verdade está rodando. Os `print()` só aparecem quando o programa encerra ou o buffer enche.
+```bash
+# 1. Clonar o repositório
+git clone https://github.com/fernando01303/TCC.git
+cd TCC
 
-**CAUSA:**
-O Python faz buffer do stdout por padrão quando não está rodando em terminal interativo.
+# 2. Criar e ativar ambiente virtual
+python -m venv .venv
+.venv\Scripts\activate
 
-**SOLUÇÃO:**
-Adicionar no início do script:
-```python
-import functools
-print = functools.partial(print, flush=True)
+# 3. Instalar dependências (MediaPipe < 1.0 é obrigatório)
+pip install -r requirements.txt
+
+# 4. Executar o sistema
+python mouse_virtual.py
+```
+
+### Gerar o executável único (`.exe`)
+
+```bash
+pyinstaller --onefile --noconsole --splash splash.png --collect-all mediapipe --name MouseVirtual mouse_virtual.py
 ```
 
 ---
 
-## BUG #6 — cv2.VideoCapture() trava INDEFINIDAMENTE (não retorna)
+## 📚 Documentação Adicional
 
-**SINTOMA:**
-O script parece travar logo na inicialização. Nenhum print() aparece. O processo fica vivo mas não faz nada.
-
-**CAUSA:**
-Em alguns sistemas Windows, `cv2.VideoCapture(indice)` pode travar INDEFINIDAMENTE ao tentar abrir uma câmera que não existe ou que está em estado inconsistente.
-
-**SOLUÇÃO:**
-Rodar cada tentativa de `cv2.VideoCapture()` em uma THREAD SEPARADA com timeout. Se a thread não retornar em 5 segundos, ela é considerada travada e abandonada.
-
----
-
-## BUG #7 — Tela verde PERSISTE mesmo trocando codec (H264/MJPG/auto)
-
-**SINTOMA:**
-Ao abrir a câmera virtual do DroidCam (índice 0) com `cv2.VideoCapture()`, TODOS os codecs resultam em tela verde.
-
-**CAUSA:**
-O driver virtual do DroidCam no Windows registra a câmera como dispositivo MSMF, mas entrega os frames em formato H.264 comprimido. O OpenCV (via MSMF ou DSHOW) não possui decodificador H.264 integrado para câmeras virtuais.
-
-**SOLUÇÃO DEFINITIVA:**
-Conectar DIRETAMENTE no stream HTTP do DroidCam no celular, usando a URL:
-`http://<IP_DO_CELULAR>:4747/video`
-O backend FFmpeg do OpenCV consegue decodificar o H.264 HTTP nativamente.
-
----
-
-## BUG #8 — Falha na conexão Wi-Fi / Instabilidade da Tela Verde
-
-**SINTOMA:**
-A conexão Wi-Fi do DroidCam via HTTP pode falhar, travar ou continuar retornando tela verde dependendo do firewall.
-
-**CAUSA:**
-A rede local pode bloquear portas, ou o stream Wi-Fi pode sofrer quedas que corrompem a decodificação do frame.
-
-**SOLUÇÃO DEFINITIVA:**
-Conectar o DroidCam via **cabo USB**. Isso garante estabilidade máxima na conexão. Ao usar o cabo USB, a câmera passa a funcionar como um dispositivo local normal (índice 0, 1 ou 2) sendo reconhecida instantaneamente sem usar lógicas de rede, garantindo que o OpenCV receba vídeo descomprimido limpo.
+- [**RELATORIO_DE_ERROS.md**](./RELATORIO_DE_ERROS.md) — Registro detalhado dos problemas encontrados durante o desenvolvimento (incluindo incompatibilidades do MediaPipe e soluções com DroidCam USB) e suas respectivas soluções.
